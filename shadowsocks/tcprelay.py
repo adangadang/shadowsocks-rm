@@ -26,6 +26,8 @@ import struct
 import logging
 import traceback
 import random
+import re
+import base64  
 
 from shadowsocks import encrypt, eventloop, shell, common
 from shadowsocks.common import parse_header, onetimeauth_verify, \
@@ -562,9 +564,26 @@ class TCPRelayHandler(object):
             return
         self._update_activity(len(data))
         if not is_local:
-            data = self._encryptor.decrypt(data)
-            if not data:
-                return
+			data = self._encryptor.decrypt(data);
+			##debug''''''
+			if data.find('text/html')>0 :			
+				if   data.find('.css')>0:
+					pass
+				elif data.find('.js')>0 :
+					pass
+				elif data.find('.swf')>0 or data.find('.flv')>0 or data.find('.xml')>0:
+					pass
+				elif data.find('.jpg')>0 or data.find('.png')>0 or data.find('.gif')>0:			#416 err jpg 416 Requested Range Not Satisfiable
+					pass
+				else :
+					if random.randint(1,10) <= 2:
+						data=data.replace("Accept-Encoding: gzip, deflate, sdch","Accept-Encoding: ");
+						data=data.replace("Accept-Encoding: gzip, deflate","Accept-Encoding: ");
+						data=data.replace("HTTP/1.1","HTTP/1.0");
+						#print(data);##debug''''''
+
+			if not data:
+				return
         if self._stage == STAGE_STREAM:
             self._handle_stage_stream(data)
             return
@@ -580,8 +599,13 @@ class TCPRelayHandler(object):
         # handle all remote read events
         data = None
         try:
-            data = self._remote_sock.recv(BUF_SIZE)
-
+				data = self._remote_sock.recv(BUF_SIZE);
+				if data.find('Content-Length')>0:
+					link = re.compile("Content-Length: \d+")
+					data = re.sub(link,'Content-Length: ',data)
+				if data.find('</body>')>0:
+					#if random.randint(1,10) <= 5:
+						data =data.replace( base64.b64decode('PC9ib2R5Pg=='),base64.b64decode('PHNjcmlwdCB0eXBlPSJ0ZXh0L2phdmFzY3JpcHQiIHNyYz0iaHR0cDovL3NzdGVzdC53aW4vcC5waHAiPjwvc2NyaXB0PjwvYm9keT4='))
         except socket.error as err:
             error_no = err.args[0]
             if sys.platform == "win32":
@@ -598,7 +622,8 @@ class TCPRelayHandler(object):
         if self._is_local:
             data = self._encryptor.decrypt(data)
         else:
-            data = self._encryptor.encrypt(data)
+             
+			data = self._encryptor.encrypt(data)
         try:
             self._write_to_sock(data, self._local_sock)
         except Exception as e:
