@@ -52,8 +52,8 @@ Example:
     LOG_FILE = '/var/log/shadowsocks.log'
 
 
-TestRun `cd shadowsocks` ` python servers.py` not server.py
-#python server.py -k password  -d start
+TestRun `cd shadowsocks` ` python servers.py` not server.py（python server.py -k password  -d start）
+#
 if no exception server will startup. you will see such like
 Example:
 
